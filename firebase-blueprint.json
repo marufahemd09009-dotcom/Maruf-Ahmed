@@ -1,0 +1,244 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and wallet statistics",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique Firebase Auth UID"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "balance": {
+          "type": "number",
+          "description": "Current wallet balance in INR"
+        },
+        "totalEarned": {
+          "type": "number",
+          "description": "Lifetime earned INR"
+        },
+        "totalWithdrawn": {
+          "type": "number",
+          "description": "Total INR withdrawn"
+        },
+        "dailyStreak": {
+          "type": "number",
+          "description": "Current daily checkin streak count"
+        },
+        "lastCheckInDate": {
+          "type": "string",
+          "description": "Date of last check in YYYY-MM-DD"
+        },
+        "referralCode": {
+          "type": "string",
+          "description": "User unique referral invite code"
+        },
+        "referredBy": {
+          "type": "string",
+          "description": "Referral code used during signup"
+        },
+        "referralCount": {
+          "type": "number",
+          "description": "Number of friends referred"
+        },
+        "referralEarnings": {
+          "type": "number",
+          "description": "Total coins/INR earned from referrals"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Account creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Account update timestamp"
+        }
+      },
+      "required": ["userId", "email", "balance"]
+    },
+    "WithdrawalRequest": {
+      "title": "WithdrawalRequest",
+      "description": "Withdrawal payout request through UPI or Paytm",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique withdrawal ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Requester user ID"
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "Requester email"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Withdrawal amount in INR"
+        },
+        "method": {
+          "type": "string",
+          "description": "Payment gateway method (UPI or PAYTM)"
+        },
+        "payoutDetails": {
+          "type": "string",
+          "description": "UPI VPA or Paytm phone number"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status: pending, processing, completed, rejected"
+        },
+        "referenceId": {
+          "type": "string",
+          "description": "Bank UTR or Transaction reference number"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when payout was requested"
+        }
+      },
+      "required": ["id", "userId", "amount", "method", "payoutDetails", "status", "createdAt"]
+    },
+    "TaskActivity": {
+      "title": "TaskActivity",
+      "description": "Record of a completed earning task or reward",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique activity ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "User who performed the task"
+        },
+        "taskType": {
+          "type": "string",
+          "description": "Type of task: daily_checkin, ad_watch, quiz, scratch_card, spin_wheel, captcha, survey, referral"
+        },
+        "taskTitle": {
+          "type": "string",
+          "description": "Readable title of the task"
+        },
+        "rewardAmount": {
+          "type": "number",
+          "description": "Amount credited in INR"
+        },
+        "completedAt": {
+          "type": "string",
+          "description": "Completion timestamp"
+        }
+      },
+      "required": ["id", "userId", "taskType", "taskTitle", "rewardAmount", "completedAt"]
+    },
+    "ReferralRecord": {
+      "title": "ReferralRecord",
+      "description": "Record of a successful friend referral with bonus attribution",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique referral record ID"
+        },
+        "referrerUserId": {
+          "type": "string",
+          "description": "UID of the user who invited"
+        },
+        "referrerCode": {
+          "type": "string",
+          "description": "Referral code used"
+        },
+        "refereeUserId": {
+          "type": "string",
+          "description": "UID of the invited friend"
+        },
+        "refereeName": {
+          "type": "string",
+          "description": "Name of the invited friend"
+        },
+        "refereeEmail": {
+          "type": "string",
+          "description": "Email of the invited friend"
+        },
+        "rewardAmount": {
+          "type": "number",
+          "description": "Bonus coins/INR granted to referrer"
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of reward: completed or pending"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp when friend signed up"
+        }
+      },
+      "required": ["id", "referrerUserId", "referrerCode", "refereeUserId", "rewardAmount", "status", "createdAt"]
+    },
+    "ReferralCodeMapping": {
+      "title": "ReferralCodeMapping",
+      "description": "Mapping from referral code to owner user ID",
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "description": "Unique uppercase invite code"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner UID"
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Owner display name"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["code", "userId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserProfile"
+      },
+      "description": "Individual user wallet, streak and profile document"
+    },
+    "/withdrawals/{withdrawalId}": {
+      "schema": {
+        "$ref": "#/entities/WithdrawalRequest"
+      },
+      "description": "Payout requests submitted by users for UPI or Paytm settlements"
+    },
+    "/activities/{activityId}": {
+      "schema": {
+        "$ref": "#/entities/TaskActivity"
+      },
+      "description": "Task history logs and reward transactions"
+    },
+    "/referrals/{referralId}": {
+      "schema": {
+        "$ref": "#/entities/ReferralRecord"
+      },
+      "description": "Log of successful friend referrals and bonus earnings"
+    },
+    "/referralCodes/{code}": {
+      "schema": {
+        "$ref": "#/entities/ReferralCodeMapping"
+      },
+      "description": "Public referral code lookup mapping"
+    }
+  }
+}

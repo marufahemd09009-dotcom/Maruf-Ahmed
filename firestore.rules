@@ -1,0 +1,142 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for UserProfile
+    function isValidUserProfile(data) {
+      return data.userId is string && data.userId == request.auth.uid &&
+             data.email is string && data.email.size() <= 128 &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+             data.balance is number && data.balance >= 0 &&
+             (!('totalEarned' in data) || (data.totalEarned is number && data.totalEarned >= 0)) &&
+             (!('totalWithdrawn' in data) || (data.totalWithdrawn is number && data.totalWithdrawn >= 0)) &&
+             (!('dailyStreak' in data) || (data.dailyStreak is number && data.dailyStreak >= 0)) &&
+             (!('lastCheckInDate' in data) || (data.lastCheckInDate is string && data.lastCheckInDate.size() <= 20)) &&
+             (!('referralCode' in data) || (data.referralCode is string && data.referralCode.size() <= 30)) &&
+             (!('referredBy' in data) || (data.referredBy is string && data.referredBy.size() <= 30)) &&
+             (!('referralCount' in data) || (data.referralCount is number && data.referralCount >= 0)) &&
+             (!('referralEarnings' in data) || (data.referralEarnings is number && data.referralEarnings >= 0)) &&
+             (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 40)) &&
+             (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 40));
+    }
+
+    // Validation for WithdrawalRequest
+    function isValidWithdrawal(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.userEmail is string && data.userEmail.size() <= 128 &&
+             data.amount is number && data.amount >= 10 && data.amount <= 50000 &&
+             data.method is string && (data.method == 'UPI' || data.method == 'PAYTM') &&
+             data.payoutDetails is string && data.payoutDetails.size() > 0 && data.payoutDetails.size() <= 128 &&
+             data.status is string && (data.status == 'pending' || data.status == 'processing' || data.status == 'completed' || data.status == 'rejected') &&
+             (!('referenceId' in data) || (data.referenceId is string && data.referenceId.size() <= 100)) &&
+             data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    // Validation for TaskActivity
+    function isValidActivity(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.taskType is string && data.taskType.size() <= 50 &&
+             data.taskTitle is string && data.taskTitle.size() <= 128 &&
+             data.rewardAmount is number && data.rewardAmount >= -50000 && data.rewardAmount <= 5000 &&
+             data.completedAt is string && data.completedAt.size() <= 40;
+    }
+
+    // Validation for ReferralRecord
+    function isValidReferral(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.referrerUserId is string && data.referrerUserId.size() <= 128 &&
+             data.referrerCode is string && data.referrerCode.size() <= 30 &&
+             data.refereeUserId is string && data.refereeUserId == request.auth.uid &&
+             (!('refereeName' in data) || (data.refereeName is string && data.refereeName.size() <= 100)) &&
+             (!('refereeEmail' in data) || (data.refereeEmail is string && data.refereeEmail.size() <= 128)) &&
+             data.rewardAmount is number && data.rewardAmount >= 0 && data.rewardAmount <= 500 &&
+             data.status is string && (data.status == 'completed' || data.status == 'pending') &&
+             data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    // Validation for ReferralCodeMapping
+    function isValidReferralCode(data) {
+      return data.code is string && data.code.size() <= 30 &&
+             data.userId is string && data.userId == request.auth.uid &&
+             (!('ownerName' in data) || (data.ownerName is string && data.ownerName.size() <= 100)) &&
+             data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    // User Profile collection
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidUserProfile(incoming()) && incoming().userId == existing().userId;
+      allow delete: if false;
+    }
+
+    // Withdrawal requests
+    match /withdrawals/{withdrawalId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(withdrawalId) && isValidWithdrawal(incoming());
+      allow update: if isSignedIn() && existing().userId == request.auth.uid && isValidWithdrawal(incoming()) &&
+                    incoming().userId == existing().userId && incoming().amount == existing().amount;
+      allow delete: if false;
+    }
+
+    // Task activities / rewards history
+    match /activities/{activityId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidId(activityId) && isValidActivity(incoming());
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Referral records
+    match /referrals/{referralId} {
+      allow get: if isSignedIn() && (existing().referrerUserId == request.auth.uid || existing().refereeUserId == request.auth.uid);
+      allow list: if isSignedIn() && (resource.data.referrerUserId == request.auth.uid || resource.data.refereeUserId == request.auth.uid);
+      allow create: if isSignedIn() && isValidId(referralId) && isValidReferral(incoming());
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // Referral code lookups
+    match /referralCodes/{code} {
+      allow get, list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(code) && isValidReferralCode(incoming());
+      allow update, delete: if false;
+    }
+
+    // Connectivity test collection
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

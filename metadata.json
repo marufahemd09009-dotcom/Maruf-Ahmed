@@ -1,0 +1,6 @@
+{
+  "name": "TaskEarn - Task & Earn Money App",
+  "description": "Complete tasks, watch ads, solve quizzes, and earn cash with instant UPI and Paytm payouts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
